@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>La notte, esistono.</title>
+
+<!-- ===== FONT ====================================================
+     Proposta: Cormorant Garamond (titolo) + sans di sistema (credito).
+     Per cambiarlo domani: sostituisci questo <link> con un altro font
+     di Google Fonts e aggiorna --font-title qui sotto. Tutto qui.
+============================================================== -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,400&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --font-title: "Cormorant Garamond", Georgia, serif;
+    --font-meta:  system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    --white: #ffffff;
+    --fade: 1100ms;   /* durata del passaggio immagine -> video */
+  }
+
+  *{ box-sizing:border-box; margin:0; padding:0; }
+
+  html,body{
+    height:100%;
+    background:#000;
+    color:var(--white);
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .layer{ position:fixed; inset:0; }
+
+  /* --- video di sfondo: si vede TUTTO (niente tagli) su fondo nero --- */
+  #bg{
+    width:100%; height:100%;
+    object-fit:contain;        /* mostra l'intera figura, eventuali bande nere */
+    object-position:center;
+    background:#000;
+  }
+
+  /* --- pagina d'ingresso: immagine + titolo + play --- */
+  #intro{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap: clamp(28px, 6vh, 56px);
+    text-align:center;
+    transition: opacity var(--fade) ease;
+  }
+  #intro::before{                 /* immagine d'apertura (provvisoria) */
+    content:"";
+    position:absolute; inset:0;
+    background:#000 url("media/intro.png") center/cover no-repeat;
+  }
+  #intro::after{                  /* velo scuro per leggibilità del bianco */
+    content:"";
+    position:absolute; inset:0;
+    background: radial-gradient(120% 90% at 50% 45%, rgba(0,0,20,.10) 0%, rgba(0,0,25,.42) 75%);
+  }
+  #intro > *{ position:relative; z-index:1; }
+
+  .title{
+    font-family:var(--font-title);
+    font-weight:300;
+    font-size: clamp(1.5rem, 7vw, 3.4rem);
+    line-height:1.05;
+    letter-spacing:.005em;
+    white-space:nowrap;                 /* sempre su una sola riga */
+    text-shadow: 0 2px 30px rgba(0,0,20,.55);
+  }
+
+  .play{
+    appearance:none;
+    background:transparent;
+    border:1.4px solid rgba(255,255,255,.9);
+    width: clamp(62px, 16vw, 78px);
+    aspect-ratio:1;
+    border-radius:50%;
+    color:var(--white);
+    display:grid; place-items:center;
+    cursor:pointer;
+    transition: transform .35s ease, background-color .35s ease, border-color .35s ease;
+  }
+  .play svg{ width:34%; height:34%; transform:translateX(7%); }
+  .play:hover, .play:focus-visible{
+    background:rgba(255,255,255,.12);
+    transform:scale(1.06);
+  }
+  .play:focus-visible{ outline:2px solid #fff; outline-offset:5px; }
+
+  /* --- credito (asterisco), visibile solo dopo il play --- */
+  #credit{
+    position:fixed;
+    left:0; right:0;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + clamp(20px, 4.5vh, 40px));
+    padding:0 24px;
+    text-align:center;
+    z-index:5;
+    opacity:0;
+    transition: opacity 900ms ease 350ms;
+    pointer-events:none;
+  }
+  #credit p{
+    font-family:var(--font-meta);
+    font-weight:400;
+    font-size: clamp(.66rem, 2.7vw, .78rem);
+    line-height:1.5;
+    letter-spacing:.015em;
+    color:rgba(255,255,255,.9);
+    max-width: 40ch;
+    margin:0 auto;
+    text-shadow: 0 1px 14px rgba(0,0,0,.7);
+  }
+  #credit .ast{ margin-right:.18em; }
+
+  body.playing #intro{ opacity:0; pointer-events:none; }
+  body.playing #credit{ opacity:1; }
+
+  @media (prefers-reduced-motion: reduce){
+    #intro, #credit, .play{ transition:none; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- video di sfondo: muto, loop pulito (90 frame), parte sotto l'immagine -->
+  <video id="bg" class="layer" autoplay muted loop playsinline preload="auto">
+    <source src="media/sfondo.webm" type="video/webm">
+    <source src="media/sfondo.mp4"  type="video/mp4">
+  </video>
+
+  <!-- audio dell'installazione: parte solo col play (gesto utente) -->
+  <audio id="snd" loop preload="auto">
+    <source src="media/sogno_loop.mp3" type="audio/mpeg">
+  </audio>
+
+  <!-- pagina d'ingresso -->
+  <div id="intro" class="layer">
+    <h1 class="title">La notte, esistono.</h1>
+    <button class="play" id="playBtn" aria-label="Play">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3.5v17l15-8.5z" fill="currentColor"/></svg>
+    </button>
+  </div>
+
+  <!-- credito -->
+  <div id="credit">
+    <p><span class="ast">*</span>i sogni sono stati raccolti tramite messaggi audio e utilizzati come installazione sonora al Teatro dei Filodrammatici a Milano nel 2022</p>
+  </div>
+
+<script>
+  const snd   = document.getElementById('snd');
+  const video = document.getElementById('bg');
+  const btn   = document.getElementById('playBtn');
+
+  function enter(){
+    video.play().catch(()=>{});       // forza il via al video se l'autoplay è bloccato
+    snd.currentTime = 0;
+    const p = snd.play();
+    if (p && p.catch) p.catch(err => console.warn('audio:', err));
+    document.body.classList.add('playing');
+  }
+
+  btn.addEventListener('click', enter);
+</script>
+</body>
+</html>
